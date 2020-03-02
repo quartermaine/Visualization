@@ -1,0 +1,440 @@
+---
+title: "lab5"
+author: "Andreas and Priya"
+date: "2018"
+output:
+  html_document:
+    code_folding: hide
+    theme: spacelab
+    toc: true
+  
+---
+
+##Assignment 1
+
+```{r,message=FALSE}
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+library(viridisLite)
+library(plotrix)
+library(tidyverse)
+```
+
+###Word Cloud Plot for five 
+
+```{r}
+five<-read.table("~/Visualization/lab_5/Five.txt",header=F, sep='\n')#Read file
+five$doc_id=1:nrow(five)
+colnames(five)[1]<-"text"
+mycorpus <- Corpus(DataframeSource(five)) #Creating corpus (collection of text data)
+
+clean_corpus <- function(corpus){
+  corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, stripWhitespace)
+  corpus <- tm_map(corpus,function(x) removeWords(x,stopwords("english")))
+   return(corpus)
+}
+
+
+mycorpus <- clean_corpus(mycorpus)
+tdm <- TermDocumentMatrix(mycorpus) #Creating term-document matrix
+m <- as.matrix(tdm)
+
+#here we merge all rows
+v <- sort(rowSums(m),decreasing=TRUE) #Sum up the frequencies of each word
+d <- data.frame(word = names(v),freq=v) #Create one column=names, second=frequences
+
+pal<-brewer.pal(6,"PRGn") #Create palette of colors
+#color_pal <- cividis(n = 8)
+
+
+#wordcloud(d$word,d$freq, scale=c(8,.3),min.freq=2,max.words=100, random.order=F, rot.per=.15, colors=col_pal, vfont=c("sans #serif","plain"))
+
+wordcloud(d$word,d$freq, scale=c(8,.3),min.freq=2,max.words=100, random.order=F, rot.per=.15, colors=pal, vfont=c("sans serif","plain"))
+
+```
+
+###Word Cloud Plot for One Two
+
+```{r}
+oneTwo<-read.table("~/Visualization/lab_5/oneTwo.txt",header=F,sep="\n")
+oneTwo$doc_id=1:nrow(oneTwo)
+colnames(oneTwo)[1]<-"text"
+
+mycor <- Corpus(DataframeSource(oneTwo))
+
+mycor <- clean_corpus(mycor)
+tdm1<- TermDocumentMatrix(mycor) #Creating term-document matrix
+m1 <- as.matrix(tdm1)
+
+#here we merge all rows
+v1 <- sort(rowSums(m1),decreasing=TRUE) #Sum up the frequencies of each word
+d1<- data.frame(word = names(v1),freq=v1)
+pal<-brewer.pal(8,"Dark2")
+
+wordcloud(d1$word,d1$freq, scale=c(8,.3),min.freq=2,max.words=100, random.order=F, rot.per=.15, colors=pal, vfont=c("sans serif","plain"))
+```
+
+
+###Pyramid Plot
+
+```{r,message=FALSE}
+j<-left_join(d,d1,by="word")
+
+pyramid.plot(
+  j$freq.x[1:10],j$freq.y[1:10],
+  # Words
+  labels = j$word[1:10], 
+  top.labels = c("Words in File", "Common Words", "Words in oneTwo"), 
+  main = "Pyramid Plot",gap=17,unit="counts")
+
+```
+
+The word cloud for five.txt which is the good feedback has more frequent words like watch,great,one,price,casio,years,battery etc.This makes sense as words watch and casio will be often coming in the words as this is the product.As it is a positive feedback,people are happy with the price.Great is a posisive word and may be telling it last for long with word years.
+
+THe oneTwo.txt is the negative feedback and the frequesnt words are amazon,one,back,watch,casio,battery etc.casio and watch comes frequent like before as this is the product.Amazon ,may be because they are not happy with the amazon more than product(may be the deal,return policy,shipping etc).They would like to return back the product and hence **back** has come multiple times.
+
+###Phrasenets
+
+Phrase nets of five.text
+
+
+![Figure 1. positive.](/Users/quartermaine/Documents/Visualization/lab_5/fivetext.png){width=500 height=200}
+
+phrase nets of negative words 
+
+![Figure 2. negative](/Users/quartermaine/Documents/Visualization/lab_5/onetwo.png){width=500 height=200} 
+
+word trees
+
+word tree of battery with the positive feedback
+
+![Figure 4. wordtree battery pos feedback](/Users/quartermaine/Documents/Visualization/lab_5/positivebtry.png){width=500 height=200}
+
+word tree with the word battery in negative feedback
+
+![Figure 4. wordtree battery neg feedback](/Users/quartermaine/Documents/Visualization/lab_5//ngtivebtry.png){width=500 height=200}
+
+###Analysis
+
+
+Looking at the above graphs we come to conclusions like 
+
+THe watch has analog and dgital display and it appears in black,gold and white.It has sporty look,rubbery band and waterprrof and good value for money.The satisfied customers are talking about modern look,water resistance,some of them say the battery last long and it is good priced.Dis statisfied customers talk about the defective alrams,battery once changed the watch does not work well,The analog portions becomes defective etc.Also Replacing battery is costly .
+
+Seems like the customers are satisfied with the look and feel and price of the watch .With some changesin the battery and all it can be a good product.
+
+
+
+##Assignment 2
+```{r,message=FALSE}
+library(tidyverse)
+library(plotly)
+library(plyr)
+library(crosstalk)
+library(GGally)
+
+olive<-read.csv("~/Visualization/lab_5/olive.csv")
+olive$Region<-as.factor(olive$Region)
+levels(olive$Region)<-c("1","2","3")
+o<-SharedData$new(olive)
+oo<-SharedData$new(olive,~Region,group = "Choose region")
+```
+
+
+###1.Scatter Plot eicoseinoic vs linoleic
+
+```{r,set-options}
+
+scatterolive <- plot_ly(oo, y = ~eicosenoic, x = ~ linoleic)%>%group_by(Region)%>%
+  add_markers(color = I("black"),name="hollow")%>%highlight(on="plotly_hover",persistent = F,selectize = T) %>%  layout(xaxis = list(title = "Linoleic"),
+      yaxis = list(title = "Eicosenoic"))
+
+scatterolive
+```
+
+
+The value of eicosenoic is between one and three.
+###2.Linked Scatterplot and Bar chart 
+
+```{r,message=FALSE,warning=FALSE}
+
+
+
+barolive <- plot_ly(oo, x=~as.factor(Region))%>%add_histogram()%>%layout(barmode="overlay",xaxis=list(title="Region")) 
+                                              
+bscols(widths=c(2, NA),filter_slider("stearic", "values of stearic", oo, ~stearic),subplot(scatterolive,barolive,titleY = TRUE,  titleX = TRUE)%>%highlight(on="plotly_select", dynamic=T, persistent = T, opacityDim = I(1))%>%hide_legend())
+
+
+
+```
+
+![Figure 1. coloured](/Users/quartermaine/Documents/Visualization/lab_5/brush.png){width=500 height=200}
+
+
+Using brushing when we take out the lower values of eicosenoic(between 1 and 3),we can see they correspond to region south and sardinia Island.In south region the amount of stearic acid is between 190 and 270.
+
+The operators used here are seelction operators for brushing,Connection operator for connecting the plots and Filtering operator for filtering stearic values
+
+###3.Linked Scatter Plots
+```{r,message=FALSE}
+
+scatter1 <- plot_ly(o, x = ~linoleic, y = ~eicosenoic) %>%
+  add_markers(color = I("black"))  %>% layout(xaxis = list(title = "linoleic"),
+                                         yaxis = list(title = "Eicosenoic"))
+scatter2 <- plot_ly(o, x = ~linoleic, y = ~arachidic) %>%
+  add_markers(color = I("black"))%>% layout(xaxis = list(title = "linoleic"),
+                                            yaxis = list(title = "arachidic"))
+
+
+subplot(scatter1,scatter2)%>%
+  highlight(on="plotly_select", dynamic=T, persistent=T, opacityDim = I(1))%>%hide_legend()
+
+
+```
+
+![Figure 1. linked scatter](/Users/quartermaine/Documents/Visualization/lab_5/linked_scatter.png){width=500 height=200}
+
+The values of arachidic below 40 are outliers in the plot2 are also oultiers in plot 1.IN plot one their eicosenoic values are  between 1 and 3.
+
+
+###4.Parallel Coordinate Plot linked Barplot and Scatterplot
+
+```{r,message=FALSE,fig.width=20, fig.height=18}
+oliveparralelcord<-ggparcoord(olive, columns = c(3:10))
+
+
+d<-plotly_data(ggplotly(oliveparralelcord))%>%group_by(.ID)
+d1<-SharedData$new(d, ~.ID, group="olive")
+
+p1<-plot_ly(d1, x=~variable, y=~value)%>%
+  add_lines(line=list(width=0.3))%>%
+  add_markers(marker=list(size=0.3),
+              text=~.ID, hoverinfo="text")
+
+
+oildata <- olive
+oildata$.ID=1:nrow(oildata)
+d2<-SharedData$new(oildata, ~.ID, group="olive")
+p2 <- plot_ly(d2, x=~as.factor(Region))%>%add_histogram()%>%layout(barmode="overlay") 
+
+
+ButtonsX=list()
+for (i in 4:10){
+  ButtonsX[[i-3]]= list(method = "restyle",
+                        args = list( "x", list(olive[[i]])),
+                        label = colnames(olive)[i])
+}
+
+
+ButtonsY=list()
+for (i in 4:10){
+  ButtonsY[[i-3]]= list(method = "restyle",
+                        args = list( "y", list(olive[[i]])),
+                        label = colnames(olive)[i])
+}
+
+ButtonsZ=list()
+for (i in 4:10){
+  ButtonsZ[[i-3]]= list(method = "restyle",
+                        args = list( "z", list(olive[[i]])),
+                        label = colnames(olive)[i])
+}
+
+
+axx <- list(
+  title = "X"
+)
+
+axy <- list(
+  title = "Y"
+)
+
+axz <- list(
+  title = "Z"
+)
+ p3 <- plot_ly(d2,x= ~linoleic,y = ~palmitoleic, z = ~stearic)%>%add_markers()%>%
+  layout(xaxis=list(title=""), yaxis=list(title=""),
+         title = "Distribution of Oil",
+         updatemenus = list(
+           list(y=0.9, buttons = ButtonsX),
+           list(y=0.6, buttons = ButtonsY),
+           list(y=1.2, buttons = ButtonsZ)
+         )  )%>%layout(scene = list(xaxis=axx,yaxis=axy,zaxis=axz))
+
+
+
+
+ps<-htmltools::tagList(p1%>%
+                         highlight(on="plotly_select", dynamic=T, persistent = T, opacityDim = I(1))%>%
+                         hide_legend(),
+                       p2%>%
+                         highlight(on="plotly_select", dynamic=T, persistent = T, opacityDim = I(1))%>%
+                         hide_legend(),
+                       p3%>%
+                         highlight(on="plotly_click", dynamic=T, persistent = T, opacityDim = I(1))%>%
+                         hide_legend()
+)
+htmltools::browsable(ps)
+
+```
+
+When we analysed the parallel coordinate plot, linolenic, oleic and palmitonic seemed to have more clusters hence they are influentional variables to differentiate regions.
+
+In South region we can observe multiple clusters. linolenic, oleic and linoleic forms cluster, steraric, oleic, linoleic forms another cluster.
+
+
+![Figure 1. plot_123](/Users/quartermaine/Documents/Visualization/lab_5/plot_123.png){width=500 height=200}
+
+![Figure 1. plot_123](/Users/quartermaine/Documents/Visualization/lab_5/plot_124.png){width=500 height=200}
+
+![Figure 1. plot_123](/Users/quartermaine/Documents/Visualization/lab_5/plot_125.png){width=500 height=200}
+
+
+As seen in the above screenshots, when we select the 3 variables and brush the regions with 3 different colours, the plot is almost clusterd in 3 seperate groups.
+
+###5.Analysis
+
+In step 4 we have used:
+
+selection operator while brushing the plots ,connection operator to connect plots,
+Reconfiguring operator dynamically selectiong axix variables in 3D plot on data value space operand
+
+An additional interaction operator which can be used is Filtering operator.This operator can be used to filter based on regions and analyse the concentration of acids in oil from each region. This data can be used for analysing the region of origin of an oil given the concentration of acids in that oil.
+
+
+##Appendix
+
+```{r,eval=FALSE}
+
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
+library(viridisLite)
+library(plotrix)
+library(tidyverse)
+five<-read.table("Five.txt",header=F, sep='\n')#Read file
+five$doc_id=1:nrow(five)
+colnames(five)[1]<-"text"
+mycorpus <- Corpus(DataframeSource(five)) #Creating corpus (collection of text data)
+
+clean_corpus <- function(corpus){
+  corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, stripWhitespace)
+  corpus <- tm_map(corpus,function(x) removeWords(x,stopwords("english")))
+  return(corpus)
+}
+
+
+mycorpus <- clean_corpus(mycorpus)
+tdm <- TermDocumentMatrix(mycorpus) #Creating term-document matrix
+m <- as.matrix(tdm)
+
+#here we merge all rows
+v <- sort(rowSums(m),decreasing=TRUE) #Sum up the frequencies of each word
+d <- data.frame(word = names(v),freq=v) #Create one column=names, second=frequences
+
+pal<-brewer.pal(6,"PRGn") #Create palette of colors
+#color_pal <- cividis(n = 8)
+
+
+#wordcloud(d$word,d$freq, scale=c(8,.3),min.freq=2,max.words=100, random.order=F, rot.per=.15, colors=col_pal, vfont=c("sans #serif","plain"))
+
+wordcloud(d$word,d$freq, scale=c(8,.3),min.freq=2,max.words=100, random.order=F, rot.per=.15, colors=pal, vfont=c("sans serif","plain"))
+
+oneTwo<-read.table("oneTwo.txt",header=F,sep="\n")
+oneTwo$doc_id=1:nrow(oneTwo)
+colnames(oneTwo)[1]<-"text"
+
+mycor <- Corpus(DataframeSource(oneTwo))
+
+mycor <- clean_corpus(mycor)
+tdm1<- TermDocumentMatrix(mycor) #Creating term-document matrix
+m1 <- as.matrix(tdm1)
+
+#here we merge all rows
+v1 <- sort(rowSums(m1),decreasing=TRUE) #Sum up the frequencies of each word
+d1<- data.frame(word = names(v1),freq=v1)
+pal<-brewer.pal(8,"Dark2")
+
+wordcloud(d1$word,d1$freq, scale=c(8,.3),min.freq=2,max.words=100, random.order=F, rot.per=.15, colors=pal, vfont=c("sans serif","plain"))
+
+j<-left_join(d,d1,by="word")
+
+pyramid.plot(
+  j$freq.x[1:10],j$freq.y[1:10],
+  # Words
+  labels = j$word[1:10], 
+  top.labels = c("Words in File", "Common Words", "Words in oneTwo"), 
+  main = "Pyramid Plot",gap=17,unit="counts")
+
+
+library(tidyverse)
+library(plotly)
+library(plyr)
+library(crosstalk)
+library(GGally)
+
+olive<-read.csv("olive.csv")
+olive$Region<-as.factor(olive$Region)
+levels(olive$Region)<-c("North","South","Sardinia island")
+o<-SharedData$new(olive)
+oo<-SharedData$new(olive,~Region,group = "Choose region")
+
+scatterolive <- plot_ly(oo, y = ~eicosenoic, x = ~ linoleic)%>%group_by(Region)%>%
+  add_markers(color = I("orange"),name="hollow")%>%highlight(on="plotly_hover",persistent = F,selectize = T)
+
+scatterolive
+
+scatterolive2 <- plot_ly(o, y = ~eicosenoic, x = ~ linoleic) %>%
+  add_markers(color = I("lightblue"))
+barolive <-plot_ly(o, x=~Region,group="Select your region")%>%add_histogram()%>%layout(barmode="overlay")
+bscols(widths=c(2, NA),filter_slider("Slider", "Stearic", o, ~stearic)
+       ,subplot(scatterolive2,barolive)%>%
+         highlight(on="plotly_select", dynamic=T, persistent = T, opacityDim = I(1))%>%hide_legend())
+
+
+scatter1 <- plot_ly(o, y = ~eicosenoic, x = ~linolenic) %>%
+  add_markers(color = I("black"))
+scatter2 <- plot_ly(o, y = ~arachidic, x = ~linolenic) %>%
+  add_markers(color = I("black"))
+
+
+subplot(scatter1,scatter2)%>%
+  highlight(on="plotly_select", dynamic=T, persistent=T, opacityDim = I(1))%>%hide_legend()
+
+p<-ggparcoord(olive,columns = c(4:11))
+
+d<-plotly_data(ggplotly(p))%>%group_by(.ID)
+d1<-SharedData$new(d, ~.ID, group="olive")
+p1<-plot_ly(d1, x=~variable, y=~value)%>%
+  add_lines(line=list(width=0.3))%>%
+  add_markers(marker=list(size=0.3),
+              text=~.ID, hoverinfo="text")
+
+ButtonsX=list()
+for (i in 4:11){
+  ButtonsX[[i-3]]= list(method = "restyle",
+                        args = list( "x", list(olive[[i]])),
+                        label = colnames(olive)[i])
+}
+
+ButtonsY=list()
+for (i in 4:11){
+  ButtonsY[[i-3]]= list(method = "restyle",
+                        args = list( "y", list(olive[[i]])),
+                        label = colnames(olive)[i])
+}
+
+```
+
+
+
+
+
+
+
+
